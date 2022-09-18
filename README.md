@@ -1,6 +1,6 @@
 # BW-Dump
 
-A proof-of-concept tool that extracts the master password from a locked Bitwarden vault. Only Windows systems are currently supported.
+A proof-of-concept tool that extracts the master password from a locked Bitwarden vault (only Windows systems and Chromium browsers are supported).
 
 ## Building
 **Warning: Windows Defender reports the compiled binary as being malicious!**
@@ -47,3 +47,6 @@ Requirements:
 
 PS C:\Users\Tester\dev\go\bw-dump> 
 ```
+
+## What's next?
+- Create a Volaility3 plugin that can extract master passwords from saved memory dumps.
