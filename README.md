@@ -2,6 +2,14 @@
 
 A proof-of-concept tool that extracts the master password from a locked Bitwarden vault (only Windows systems and Chromium browsers are supported).
 
+## Update (21/09/22)
+A recent security update (not sure which one exactly) has fixed the issue which means the tool is no longer working. Bitwarden web browser extension and Desktop versions `v2022.6.0` and below are still vulnerable!
+
+## Demo
+A short demo of using bw-dump with Microsoft Edge and the Bitwarden browser extension.
+
+https://user-images.githubusercontent.com/9108334/191377244-f0e9a123-e4f0-43b0-90b5-697fc005ae7b.mov
+
 ## Building
 **Warning: Windows Defender reports the compiled binary as being malicious!**
 
