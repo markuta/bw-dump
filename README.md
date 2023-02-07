@@ -5,6 +5,9 @@ A proof-of-concept tool that extracts the master password from a locked Bitwarde
 ## Update (07/02/23)
 The tool now supports the latest version of Bitwarden Desktop (2023.1.1) on Windows 10 and 11.
 
+![bw-desktop-version](https://user-images.githubusercontent.com/9108334/217309342-42fa29d5-816b-40f5-9f10-bc5a457c7e44.png)
+
+
 ## Update (21/09/22)
 A recent security update (not sure which one exactly) has fixed the issue on the web browser extension. However, on versions `v2022.6.0` and below it should still work.
 
