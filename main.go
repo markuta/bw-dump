@@ -8,9 +8,6 @@ import (
 	"github.com/shirou/gopsutil/v3/process"
 )
 
-// The following may change in future versions of the Bitwarden extension
-// Tested with the latest version Bitwarden 1.58 on MSEdge and Chrome
-
 var dumpMemoryOption bool
 
 func init() {
@@ -29,36 +26,30 @@ func main() {
                                                            888     
             Created by @NazMarkuta at Red Maple            888       
 `)
-
-	fmt.Printf("BW-Dump is a forensics tool that extracts plaintext Bitwarden Master Passwords from\nlocked vaults. It does this by reading browser extensions process memory by calling Windows\nAPI functions and searching for magic byte patterns.\n\n")
-	fmt.Printf("Requirements:\n")
-	fmt.Printf("  - Chromium browser (Chrome or MSEdge)\n")
-	fmt.Printf("  - Bitwarden browser extension\n")
-	fmt.Printf("  - Vault unlocked at least once\n\n")
+	fmt.Println()
+	fmt.Printf("BW-Dump is a Windows forensics tool that extracts Bitwarden master passwords from locked vaults\n(must be unlocked at least once) by reading process memory using Windows API functions which\nsearches for magic byte patterns. The tool doesn't require any special (admin) permissions.\n\n")
+	fmt.Printf("Now supports Bitwarden Desktop App (v2023.1.1) running on Windows 10 or 11. The tool (may)\nstill support older Bitwarden Chromium extension versions (v2022.6.0) and below.\n\n")
 
 	// Search through all (accessible) processes on the system
-	procList, err := process.Processes()
+	fmt.Printf("[+] Searching for processes...\n")
 
+	procList, err := process.Processes()
 	if err != nil {
 		log.Fatalf("[!] Cannot retrieve list of processes: %s", err.Error())
 	}
 
-	// Filter for Browser and extension processes
+	// Filter through processes
 	targetProcs, err := getFilteredProcs(procList)
 	if err != nil {
-		log.Fatalf("[!] No browser extension processes found!")
+		log.Fatalf("[!] No supported processes found!")
 	}
 
-	// Print all potential potential target PIDs. Note: this may
-	// include other browser extension processes too. I haven't
-	// found a way to target a specific extension yet.
-	fmt.Printf("[+] Found Browser extension processes: %v\n\n", targetProcs)
-
 	for i := range targetProcs {
-		dumpStatus := searchProcessMemory(int(targetProcs[i]))
-
-		if dumpStatus != nil {
-			log.Fatalf("[!] Cannot dump memory of %d : %s", targetProcs[i], dumpStatus.Error())
-		}
+		p := targetProcs[i]
+		fmt.Println("[+] PID:", p.pidInt)
+		fmt.Println("[+] EXEName:", p.exeName)
+		fmt.Println("[+] CMDLine:", p.cmdLine)
+		searchProcessMemory(int(p.pidInt), p.exeName)
+		fmt.Println()
 	}
 }

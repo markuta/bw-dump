@@ -3,9 +3,15 @@ package main
 import "syscall"
 
 const (
-	ExtensionPS      = "--extension-process"
-	RegexBytePattern = `(\x04|\x05)\x00\x00\x00[^\x00]\x00\x00\x00\x01[^\x00][^\x00][^\x00]`
+	ChromeEXEName             = "chrome.exe"
+	MSEdgeEXEName             = "msedge.exe"
+	BWDesktopEXEName          = "Bitwarden.exe"
+	BWChromeCmdLine           = "--extension-process"
+	BWDesktopCmdLine          = "--no-zygote"
+	BWChromeRegexBytePattern  = `(\x04|\x05)\x00\x00\x00[^\x00]\x00\x00\x00\x01[^\x00][^\x00][^\x00]`
+	BWDesktopRegexBytePattern = `\x5e\x54`
 
+	// Leave as is
 	ERROR_NOT_ALL_ASSIGNED syscall.Errno = 1300
 
 	SecurityAnonymous      = 0
