@@ -5,6 +5,10 @@ A proof-of-concept tool that extracts the master password from a locked Bitwarde
 ## Update (07/02/23)
 The tool now supports the latest version of Bitwarden Desktop (2023.1.1) on Windows 10 and 11.
 
+![bitwarden-desktop-password-recovery-edit](https://user-images.githubusercontent.com/9108334/217886463-34460959-73b5-4f4a-bb14-504fe4ac0ded.png)
+
+Bitwarden Desktop version info.
+
 ![bw-desktop-version](https://user-images.githubusercontent.com/9108334/217309342-42fa29d5-816b-40f5-9f10-bc5a457c7e44.png)
 
 
