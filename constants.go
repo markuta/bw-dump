@@ -9,7 +9,7 @@ const (
 	BWChromeCmdLine           = "--extension-process"
 	BWDesktopCmdLine          = "--no-zygote"
 	BWChromeRegexBytePattern  = `(\x04|\x05)\x00\x00\x00[^\x00]\x00\x00\x00\x01[^\x00][^\x00][^\x00]`
-	BWDesktopRegexBytePattern = `\x5e\x54`
+	BWDesktopRegexBytePattern = `\x01(?:[^\x00]{3})(?:[(\x20-\x7E)]{8,})` // Matches 8+ ASCII characters only
 
 	// Leave as is
 	ERROR_NOT_ALL_ASSIGNED syscall.Errno = 1300
