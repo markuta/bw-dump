@@ -47,7 +47,8 @@ func main() {
 		log.Fatalf("[!] No supported processes found!")
 	}
 
-	//aName := []string{}
+	aSlice := []string{}
+	bSlice := []string{}
 	//previousValue := ""
 	// Search each targetProcs process memory
 	for i := range targetProcs {
@@ -67,9 +68,14 @@ func main() {
 		for _, y := range results {
 
 			for i := 1; i < len(y); i++ {
+
+				aSlice = append(aSlice, y[i].str)
 				//for _, z := range y {
 				if strings.Contains(y[i].str, y[i-1].str) {
-					fmt.Printf("[+] %s\n", y[i].str)
+
+					// Append consecutive occurrences
+					bSlice = append(bSlice, y[i].str)
+					//fmt.Printf("[+] %s\n", y[i].str)
 				}
 
 				//fmt.Printf("[+] Output: %s \t at Index: %d (Offset 0x%x - 0x%x)\n", z.str, z.index, z.startOffset, z.endOffset)
@@ -80,7 +86,26 @@ func main() {
 
 			}
 		}
-
-		fmt.Println()
 	}
+
+	if len(bSlice) != 0 {
+		// Compare slices
+		for _, x := range bSlice {
+			for _, y := range aSlice {
+				if x == y {
+					break
+				}
+				if strings.Contains(y, x) {
+
+					fmt.Printf("[+] %q\n", y)
+
+				}
+			}
+		}
+	}
+
+	if !verboseOption {
+		fmt.Println("\n[+] Note: Try use (-v) option to view all matched strings")
+	}
+	fmt.Println()
 }
