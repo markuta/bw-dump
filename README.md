@@ -2,18 +2,55 @@
 
 A proof-of-concept tool that extracts the master password from a locked Bitwarden vault (must be unlocked at least once), only tested and supported on Windows 10 and 11.
 
-## Update (07/02/23)
-The tool now supports the latest version of Bitwarden Desktop (2023.1.1) on Windows 10 and 11.
+## Update (24/02/23)
 
-![bitwarden-desktop-password-recovery-edit](https://user-images.githubusercontent.com/9108334/217886463-34460959-73b5-4f4a-bb14-504fe4ac0ded.png)
+![bitwarden-desktop-password-recovery-latest](https://user-images.githubusercontent.com/9108334/221217481-80bd8e11-95d5-45d7-8ad3-15cb12e7e53f.png)
 
-Bitwarden Desktop version info.
+Fixed a major issue with search pattern. A new and improved regular expression and logic has been implemented. This helps identify strings that could potentially be the master password, or at least parts of it. Added a `-v` verbose option, which shows all strings that match the regex pattern. The tool has been tested and confirmed working on the latest version of Bitwarden Desktop (2023.2.0) on Windows 10 and 11.
 
-![bw-desktop-version](https://user-images.githubusercontent.com/9108334/217309342-42fa29d5-816b-40f5-9f10-bc5a457c7e44.png)
+Example output:
 
+```
+[+] Searching for processes...
+[+] PID: 5468
+[+] EXEName: Bitwarden.exe
+[+] CMDLine: "C:\Users\Tester\AppData\Local\Programs\Bitwarden\Bitwarden.exe" --type=renderer --user-data-dir="C:\Users\Tester\AppData\Roaming\Bitwarden" --app-path="C:\Users\Tester\AppData\Local\Programs\Bitwarden\resources\app.asar" --no-sandbox --no-zygote --first-renderer-process --lang=en-GB --device-scale-factor=1 --num-raster-threads=1 --renderer-client-id=4 --time-ticks-at-unix-epoch=-1677156036809828 --launch-time-ticks=36228907657 --mojo-platform-channel-handle=2540 --field-trial-handle=1816,i,6300308413610308636,7516158819106443187,131072 --disable-features=SpareRendererForSitePerProcess,WinRetrieveSuggestionsOnlyOnDemand /prefetch:1
+[+] Searching PID memory (5468)
+[+] Found initial pattern
+[+] Memory region: 0x35d40040c000 - 0x35d400434000
+[+] Region size: 0x28000
+[+] No. of hits: 40
+
+all and (min-width: 241px)and (max-width: 480px)
+all and (min-width: 481px)and (max-width: 768px)P
+cdk-virtual-scroll-orientation-horizontal5
+cdk-virtual-scroll-orientation-vertical
+c55b7254_0a77_4262_ae9b_23e2a1943d05
+attribution-reporting
+...
+ALL those flying cats
+...
+cdk-high-contrast-active
+http://www.w3.org/2000/svg-pristine
+all and (max-width: 240px)
+cdk-overlay-containergling
+axbufferpx
+Zone:defineProperty
+truncate-box
+truncate
+detaill-scroll-item
+Zone:FileReader
+lg tw-text-muted
+[+] ------- Complete ---------
+[+] ALL those fl!
+[+] ALL those flying c
+[+] ALL those flying cat
+```
+
+Tested on Bitwarden Desktop version `2023.2.0`.
 
 ## Update (21/09/22)
-A recent security update (not sure which one exactly) has fixed the issue on the web browser extension. However, on versions `v2022.6.0` and below it should still work.
+A recent security update (not sure which one exactly) has fixed the issue on the web browser extension. ~~However, on versions `v2022.6.0` and below it should still work.~~ No longer supported.
 
 ## Demo
 A short demo of using bw-dump with Microsoft Edge and the Bitwarden browser extension.
