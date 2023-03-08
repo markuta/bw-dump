@@ -1,12 +1,12 @@
 # BW-Dump
 
-A proof-of-concept tool that extracts the master password from a locked Bitwarden vault (must be unlocked at least once), only tested and supported on Windows 10 and 11.
+A proof-of-concept tool that extracts the master password from a locked Bitwarden vault (must be unlocked at least once) from Windows systems.
 
 ## Update (24/02/23)
 
 ![bitwarden-desktop-password-recovery-latest](https://user-images.githubusercontent.com/9108334/221217481-80bd8e11-95d5-45d7-8ad3-15cb12e7e53f.png)
 
-Fixed a major issue with search pattern. A new and improved regular expression and logic has been implemented. This helps identify strings that could potentially be the master password, or at least parts of it. Added a `-v` verbose option, which shows all strings that match the regex pattern. The tool has been tested and confirmed working on the latest version of Bitwarden Desktop (2023.2.0) on Windows 10 and 11.
+Fixed a major issue with search pattern. A new and improved regular expression has been implemented. This helps identify strings that could potentially be the master password, or at least parts of it. Added a `-v` verbose option, which shows all strings that match the regex pattern. The tool has been tested and confirmed working on the latest version of Bitwarden Desktop (2023.2.0) on Windows 10 and 11.
 
 Example output:
 
@@ -46,8 +46,6 @@ lg tw-text-muted
 [+] ALL those flying c
 [+] ALL those flying cat
 ```
-
-Tested on Bitwarden Desktop version `2023.2.0`.
 
 ## Update (21/09/22)
 A recent security update (not sure which one exactly) has fixed the issue on the web browser extension. ~~However, on versions `v2022.6.0` and below it should still work.~~ No longer supported.
