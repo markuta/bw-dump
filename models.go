@@ -7,7 +7,7 @@ type targetProc struct {
 }
 
 type resultStrings struct {
-	memRegion   int32
+	memRegion   uint64
 	memSize     int32
 	index       int
 	str         string

