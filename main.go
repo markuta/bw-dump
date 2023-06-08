@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/shirou/gopsutil/v3/process"
 )
@@ -67,13 +66,14 @@ func main() {
 			for i := 1; i < len(result); i++ {
 				// Shows too many results
 				//fmt.Printf("[+] %s\n", result[i].str)
+				fmt.Printf("[mem region: 0x%x] [%d] => %s\n", result[i].memRegion, result[i].index, result[i].str)
 
 				// Compare string with previous occurrence, as the
 				// Bitwarden master password is repeated several times
-				if strings.Contains(result[i].str, result[i-1].str) {
-					// Show memory region location
-					fmt.Printf("[mem region: 0x%x] => %s\n", result[i].memRegion, result[i].str)
-				}
+				//if strings.Contains(result[i].str, result[i-1].str[0:8]) && len(result[i].str) < 40 {
+				// Show memory region location
+				//	fmt.Printf("[mem region: 0x%x [%d] => %s\n", result[i].memRegion, result[i].index, result[i].str)
+				//}
 			}
 		}
 	}
