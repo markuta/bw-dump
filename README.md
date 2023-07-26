@@ -1,72 +1,32 @@
 # BW-Dump
 
-A proof-of-concept tool that extracts the master password from a locked Bitwarden vault (must be unlocked at least once) from Windows systems.
+**Updated**: A patch was released on GitHub pull request ([5813](https://github.com/bitwarden/clients/pull/5813)) which fixes the vulnerability. The affected versions are Bitwarden Desktop `2023.7.0` and below.
 
-## Update (24/02/23)
+## Description
+A proof-of-concept tool that extracts the master password from a locked Bitwarden vault (must be unlocked at least once) from Windows systems, without requiring administrative privileges. Only Windows platforms have been tested.
 
-![bitwarden-desktop-password-recovery-latest](https://user-images.githubusercontent.com/9108334/221217481-80bd8e11-95d5-45d7-8ad3-15cb12e7e53f.png)
+A blog was published and is available at: https://redmaple.tech/blogs/2023/extract-bitwarden-vault-passwords/
 
-Fixed a major issue with search pattern. A new and improved regular expression has been implemented. This helps identify strings that could potentially be the master password, or at least parts of it. Added a `-v` verbose option, which shows all strings that match the regex pattern. The tool has been tested and confirmed working on the latest version of Bitwarden Desktop (2023.2.0) on Windows 10 and 11.
-
-Example output:
-
-```
-[+] Searching for processes...
-[+] PID: 5468
-[+] EXEName: Bitwarden.exe
-[+] CMDLine: "C:\Users\Tester\AppData\Local\Programs\Bitwarden\Bitwarden.exe" --type=renderer --user-data-dir="C:\Users\Tester\AppData\Roaming\Bitwarden" --app-path="C:\Users\Tester\AppData\Local\Programs\Bitwarden\resources\app.asar" --no-sandbox --no-zygote --first-renderer-process --lang=en-GB --device-scale-factor=1 --num-raster-threads=1 --renderer-client-id=4 --time-ticks-at-unix-epoch=-1677156036809828 --launch-time-ticks=36228907657 --mojo-platform-channel-handle=2540 --field-trial-handle=1816,i,6300308413610308636,7516158819106443187,131072 --disable-features=SpareRendererForSitePerProcess,WinRetrieveSuggestionsOnlyOnDemand /prefetch:1
-[+] Searching PID memory (5468)
-[+] Found initial pattern
-[+] Memory region: 0x35d40040c000 - 0x35d400434000
-[+] Region size: 0x28000
-[+] No. of hits: 40
-
-all and (min-width: 241px)and (max-width: 480px)
-all and (min-width: 481px)and (max-width: 768px)P
-cdk-virtual-scroll-orientation-horizontal5
-cdk-virtual-scroll-orientation-vertical
-c55b7254_0a77_4262_ae9b_23e2a1943d05
-attribution-reporting
-...
-ALL those flying cats
-...
-cdk-high-contrast-active
-http://www.w3.org/2000/svg-pristine
-all and (max-width: 240px)
-cdk-overlay-containergling
-axbufferpx
-Zone:defineProperty
-truncate-box
-truncate
-detaill-scroll-item
-Zone:FileReader
-lg tw-text-muted
-[+] ------- Complete ---------
-[+] ALL those fl!
-[+] ALL those flying c
-[+] ALL those flying cat
-```
-
-## Update (21/09/22)
-A recent security update (not sure which one exactly) has fixed the issue on the web browser extension. ~~However, on versions `v2022.6.0` and below it should still work.~~ No longer supported.
-
-## Demo
-A short demo of using bw-dump with Microsoft Edge and the Bitwarden browser extension.
+### Demo
+A short demo of using bw-dump with Microsoft Edge and the Bitwarden browser extension. The latest tool only works on the Bitwarden Desktop.
 
 https://user-images.githubusercontent.com/9108334/191377244-f0e9a123-e4f0-43b0-90b5-697fc005ae7b.mov
 
 ## Building
-**Warning: Windows Defender may report the compiled binary as malicious!**
+> **Warning**: Windows Defender will report the compiled binary as malicious!
 
-To build on a system other than Windows:
+To build a stripped binary, type:
+```
+go build -ldflags="-s -w"
+```
+
+To build on a Linux system, type:
 ```bash
 env GOOS=windows GOARCH=amd64 go build -ldflags="-s -w"
 ```
 
-Otherwise, run `go build -ldflags="-s -w"` which builds a stripped binary.
-
 ## Running
-Simply build and execute the binary. It does NOT require admin rights. Make sure, a Chromium browser is running and the Bitwarden extension is installed. In addition, the vault needs to be unlocked at least once. After which, the master password will be stored in memory for a period of time. 
+Simply build and execute the binary. It does NOT require admin rights. Make sure the Bitwarden process is running. In addition, the vault needs to be unlocked at least once. After which, the master password will be stored in memory for a period of time. 
 
 You can also pass the `-d` option to dump memory regions when a pattern is found. For each result, a filename `dump-pid-<PID>-<MEM-REGION>.hex` is created in the current working directory.
 
