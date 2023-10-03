@@ -1,9 +1,11 @@
 # BW-Dump
 
+**Updated 2**: This vulnerability was assigned `CVE-2023-38840`.
+
 **Updated**: A patch was released on GitHub pull request ([5813](https://github.com/bitwarden/clients/pull/5813)) which fixes the vulnerability. The affected versions are Bitwarden Desktop `2023.7.0` and below.
 
 ## Description
-A proof-of-concept tool that extracts the master password from a locked Bitwarden vault (must be unlocked at least once) from Windows systems, without requiring administrative privileges. Only Windows platforms have been tested.
+A proof-of-concept tool that extracts the master password from a locked Bitwarden vault (must be unlocked at least once) from Windows systems. It only works for the current session, meaning it will not work after a system reboot. Administrative privileges are NOT required.
 
 A blog was published and is available at: https://redmaple.tech/blogs/2023/extract-bitwarden-vault-passwords/
 
